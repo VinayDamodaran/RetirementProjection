@@ -4,9 +4,9 @@ import numpy as np
 import plotly.graph_objects as go
 
 # Set Page Config
-st.set_page_config(page_title="Vipanjika Retirement Planner", layout="wide")
+st.set_page_config(page_title="Shamnas Retirement Planner", layout="wide")
 
-st.title("🛡️ Comprehensive Retirement Sustainability Planner")
+st.title("🛡️Shamna's Comprehensive Retirement Sustainability Planner")
 
 # --- SIDEBAR INPUTS ---
 st.sidebar.header("1. Timeline & Inflation")
