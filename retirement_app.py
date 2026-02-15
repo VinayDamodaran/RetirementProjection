@@ -16,7 +16,7 @@ inflation_rate = st.sidebar.slider("Annual Inflation (%)", 4.0, 9.0, 6.0) / 100
 
 st.sidebar.header("2. Existing Wealth & Assets")
 current_portfolio = st.sidebar.number_input("Current MF Portfolio (₹)", value=3300000)
-other_assets = st.sidebar.number_input("Other Assets (Sarranya, Home, Fund) (₹)", value=13200000)
+other_assets = st.sidebar.number_input("Other Assets (kannur home,etc) (₹)", value=2000000)
 
 st.sidebar.header("3. Future Contributions")
 monthly_sip = st.sidebar.number_input("Monthly SIP (₹)", value=100000)
