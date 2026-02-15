@@ -27,19 +27,19 @@ st.title("🛡️Shamna's Retirement Planner")
 # No changes here, Streamlit will automatically hide this behind a menu on mobile
 st.sidebar.header("1. Timeline")
 current_age = st.sidebar.slider("Current Age", 35, 55, 41)
-retirement_age = st.sidebar.slider("Retirement Age", 50, 70, 60)
+retirement_age = st.sidebar.slider("Retirement Age", 50, 70, 55)
 inflation_rate = st.sidebar.slider("Annual Inflation (%)", 4.0, 9.0, 6.0) / 100
 
 st.sidebar.header("2. Wealth & Returns")
 current_portfolio = st.sidebar.number_input("Current MF Portfolio (₹)", value=3300000)
-other_assets = st.sidebar.number_input("Other Assets-Kannur home (₹)", value=200000)
+other_assets = st.sidebar.number_input("Other Assets-Kannur home (₹)", value=2000000)
 monthly_sip = st.sidebar.number_input("Monthly SIP (₹)", value=100000)
 pre_ret_return = st.sidebar.slider("MF Return (%)", 8.0, 16.0, 12.0) / 100
 post_ret_return = st.sidebar.slider("Post-Retire Return (%)", 4.0, 9.0, 7.0) / 100
 
 st.sidebar.header("3. Expenses")
 current_monthly_exp = st.sidebar.number_input("Monthly Expense (₹)", value=100000)
-one_time_exp = st.sidebar.number_input("One-time Outflows (₹)", value=6480000)
+one_time_exp = st.sidebar.number_input("One-time Outflows (₹)-Education,Misc", value=6500000)
 
 # --- CALCULATIONS (Same as before) ---
 years_to_ret = retirement_age - current_age
