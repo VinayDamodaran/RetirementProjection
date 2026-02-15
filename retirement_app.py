@@ -55,7 +55,7 @@ else:
 
 other_assets = st.sidebar.number_input(
     "Other Assets - Kannur Home (₹)", 
-    value=2000000,
+    value=0,
     help="Real estate and other assets"
 )
 asset_appreciation = st.sidebar.slider(
