@@ -32,7 +32,7 @@ inflation_rate = st.sidebar.slider("Annual Inflation (%)", 4.0, 9.0, 6.0) / 100
 
 st.sidebar.header("2. Wealth & Returns")
 current_portfolio = st.sidebar.number_input("Current MF Portfolio (₹)", value=3300000)
-other_assets = st.sidebar.number_input("Other Assets (₹)", value=13200000)
+other_assets = st.sidebar.number_input("Other Assets-Kannur home (₹)", value=200000)
 monthly_sip = st.sidebar.number_input("Monthly SIP (₹)", value=100000)
 pre_ret_return = st.sidebar.slider("MF Return (%)", 8.0, 16.0, 12.0) / 100
 post_ret_return = st.sidebar.slider("Post-Retire Return (%)", 4.0, 9.0, 7.0) / 100
