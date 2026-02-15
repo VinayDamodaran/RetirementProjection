@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 # Set Page Config
 st.set_page_config(page_title="Retirement Planner", layout="wide")
 
-st.title("💸 Interactive Retirement & SIP Projector")
+st.title("💸 Sham's Retirement & SIP Projector")
 st.markdown("Adjust the sliders on the left to see how your corpus grows over time.")
 
 # --- SIDEBAR INPUTS ---
