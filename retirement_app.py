@@ -52,7 +52,7 @@ if include_epf:
         value=1050000,
         help="Your current EPF/PF balance"
     )
-    monthly_epf = st.sidebar.number_input("Monthly EPF Contribution (₹)", value=6000)
+    monthly_epf = st.sidebar.number_input("Monthly EPF Contribution (₹)", value=35000)
     epf_return = st.sidebar.slider("EPF Return (%)", 6.0, 10.0, 8.1) / 100
 else:
     existing_epf = 0
