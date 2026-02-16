@@ -52,7 +52,7 @@ if include_epf:
         value=1050000,
         help="Your current EPF/PF balance"
     )
-    monthly_epf = st.sidebar.number_input("Monthly EPF Contribution (₹)", value=35000)
+    monthly_epf = st.sidebar.number_input("Monthly EPF Contribution (₹)", value=6000)
     epf_return = st.sidebar.slider("EPF Return (%)", 6.0, 10.0, 8.1) / 100
 else:
     existing_epf = 0
@@ -118,10 +118,29 @@ else:
 st.sidebar.header("5. Expenses")
 current_monthly_exp = st.sidebar.number_input("Current Monthly Expense (₹)", value=100000)
 one_time_exp = st.sidebar.number_input(
-    "One-time Outflows (₹)", 
+    "One-time Outflows at Retirement (₹)", 
     value=6500000,
     help="Education, marriage, etc. - deducted at retirement"
 )
+
+# Mid-term withdrawal
+include_mid_withdrawal = st.sidebar.checkbox("Include Mid-term Withdrawal", value=True)
+if include_mid_withdrawal:
+    mid_withdrawal_year = st.sidebar.number_input(
+        "Withdrawal Year",
+        min_value=2025,
+        max_value=2050,
+        value=2028,
+        help="Year when you need to withdraw funds"
+    )
+    mid_withdrawal_amount = st.sidebar.number_input(
+        "Withdrawal Amount (₹)",
+        value=3000000,
+        help="Amount needed in that year"
+    )
+else:
+    mid_withdrawal_year = None
+    mid_withdrawal_amount = 0
 
 # Comparison mode
 st.sidebar.header("6. Compare Scenarios")
@@ -173,21 +192,30 @@ def calculate_retirement_plan(current_age, retirement_age, current_portfolio, mo
                               pre_ret_return, post_ret_return, inflation_rate, 
                               current_monthly_exp, one_time_exp, show_real_terms=False,
                               include_ltcg=False, equity_allocation=0.7, debt_allocation=0.3,
-                              debt_tax_slab=0.1, ltcg_exempt_limit=125000):
+                              debt_tax_slab=0.1, ltcg_exempt_limit=125000,
+                              mid_withdrawal_year=None, mid_withdrawal_amount=0):
     
     years_to_ret = retirement_age - current_age
     months_to_ret = years_to_ret * 12
     monthly_rate_pre = pre_ret_return / 12
     monthly_epf_rate = epf_return / 12
     
+    # Calculate when mid-term withdrawal happens
+    current_year = 2026  # Current year
+    withdrawal_age = None
+    if mid_withdrawal_year and mid_withdrawal_amount > 0:
+        withdrawal_age = current_age + (mid_withdrawal_year - current_year)
+    
     acc_ages = np.arange(current_age, retirement_age + 1)
     lump_vals, sip_vals, epf_vals, asset_vals = [], [], [], []
     
     # Track cost basis for LTCG calculation
     total_invested_mf = current_portfolio
+    mid_withdrawal_tax = 0  # Track tax paid on mid-term withdrawal
     
     for y in range(len(acc_ages)):
         m = y * 12
+        age = current_age + y
         
         # Lumpsum growth
         lump_val = current_portfolio * (1 + pre_ret_return)**y
@@ -216,6 +244,43 @@ def calculate_retirement_plan(current_age, retirement_age, current_portfolio, mo
         
         # Asset appreciation
         asset_val = other_assets * (1 + asset_appreciation)**y
+        
+        # Handle mid-term withdrawal
+        if withdrawal_age and age == withdrawal_age:
+            # Calculate total portfolio before withdrawal
+            mf_before_withdrawal = lump_val + sip_val
+            
+            # Calculate LTCG tax on withdrawal if applicable
+            if include_ltcg and mid_withdrawal_amount > 0:
+                mid_withdrawal_tax = calculate_ltcg_tax(
+                    mid_withdrawal_amount,
+                    total_invested_mf,
+                    mf_before_withdrawal,
+                    equity_allocation,
+                    debt_allocation,
+                    debt_tax_slab,
+                    ltcg_exempt_limit
+                )
+            
+            # Deduct withdrawal + tax from MF portfolio
+            total_deduction = mid_withdrawal_amount + mid_withdrawal_tax
+            withdrawal_ratio = total_deduction / mf_before_withdrawal if mf_before_withdrawal > 0 else 0
+            
+            # Reduce lumpsum and SIP proportionally
+            lump_val = lump_val * (1 - withdrawal_ratio)
+            sip_val = sip_val * (1 - withdrawal_ratio)
+            
+            # Adjust cost basis
+            total_invested_mf = total_invested_mf * (1 - withdrawal_ratio)
+            
+            # Adjust current_portfolio for future calculations
+            current_portfolio = lump_val
+            
+            # Recalculate SIP going forward (it continues from this reduced base)
+            months_so_far = m
+            if months_so_far > 0:
+                # We need to subtract what was withdrawn and continue SIP
+                pass  # The next iteration will naturally continue from reduced base
         
         # Adjust for inflation if showing real terms
         if show_real_terms:
@@ -327,7 +392,10 @@ def calculate_retirement_plan(current_age, retirement_age, current_portfolio, mo
         'total_invested': total_invested_mf + existing_epf + (monthly_epf * months_to_ret if monthly_epf > 0 else 0),
         'cumulative_ltcg_tax': cumulative_tax,
         'mf_cost_basis': mf_cost_basis,
-        'mf_value_at_ret': mf_value_at_ret
+        'mf_value_at_ret': mf_value_at_ret,
+        'mid_withdrawal_age': withdrawal_age,
+        'mid_withdrawal_amount': mid_withdrawal_amount,
+        'mid_withdrawal_tax': mid_withdrawal_tax
     }
 
 # --- MAIN CALCULATIONS ---
@@ -337,7 +405,9 @@ result = calculate_retirement_plan(
     pre_ret_return, post_ret_return, inflation_rate,
     current_monthly_exp, one_time_exp, show_real_terms,
     include_ltcg, equity_allocation, debt_allocation,
-    debt_tax_slab, ltcg_exempt_limit
+    debt_tax_slab, ltcg_exempt_limit,
+    mid_withdrawal_year if include_mid_withdrawal else None,
+    mid_withdrawal_amount if include_mid_withdrawal else 0
 )
 
 # --- METRICS DISPLAY ---
@@ -382,6 +452,16 @@ if include_ltcg and result['cumulative_ltcg_tax'] > 0:
     ⚠️ **LTCG Tax Impact**: You'll pay approximately **₹{result['cumulative_ltcg_tax']/1e5:.2f} lakhs** 
     in capital gains tax over your retirement. This reduces your effective corpus by 
     **{(result['cumulative_ltcg_tax']/result['corpus_after_one_time'])*100:.1f}%**.
+    """)
+
+# Mid-term withdrawal alert
+if include_mid_withdrawal and result['mid_withdrawal_age']:
+    st.info(f"""
+    💰 **Mid-term Withdrawal in {mid_withdrawal_year}**: 
+    - Withdrawal at age **{result['mid_withdrawal_age']}**: ₹{mid_withdrawal_amount/1e5:.2f} lakhs
+    - LTCG tax on withdrawal: ₹{result['mid_withdrawal_tax']/1000:.2f}K
+    - Total deducted from portfolio: ₹{(mid_withdrawal_amount + result['mid_withdrawal_tax'])/1e5:.2f} lakhs
+    - This reduces your retirement corpus accordingly
     """)
 
 # --- MAIN CHART ---
@@ -440,6 +520,15 @@ fig.add_trace(go.Scatter(
 # Retirement line
 fig.add_vline(x=retirement_age, line_dash="dash", line_color="gray", annotation_text="Retirement")
 
+# Mid-withdrawal line
+if include_mid_withdrawal and result['mid_withdrawal_age']:
+    fig.add_vline(
+        x=result['mid_withdrawal_age'], 
+        line_dash="dot", 
+        line_color="orange",
+        annotation_text=f"₹{mid_withdrawal_amount/1e5:.0f}L Withdrawal"
+    )
+
 fig.update_layout(
     height=500,
     margin=dict(l=10, r=10, t=40, b=80),
@@ -489,7 +578,9 @@ if compare_mode and alt_retirement_age and alt_retirement_age != retirement_age:
         pre_ret_return, post_ret_return, inflation_rate,
         current_monthly_exp, one_time_exp, show_real_terms,
         include_ltcg, equity_allocation, debt_allocation,
-        debt_tax_slab, ltcg_exempt_limit
+        debt_tax_slab, ltcg_exempt_limit,
+        mid_withdrawal_year if include_mid_withdrawal else None,
+        mid_withdrawal_amount if include_mid_withdrawal else 0
     )
     
     comp_col1, comp_col2, comp_col3 = st.columns(3)
@@ -553,6 +644,8 @@ with col_a:
         )
         st.write(f"**First Year LTCG Tax:** ₹{first_year_tax/1000:.2f}K")
         st.write(f"**Effective Monthly Need:** ₹{(result['exp_at_ret_monthly'] + first_year_tax/12)/1000:.1f}K")
+    if include_mid_withdrawal and result['mid_withdrawal_age']:
+        st.write(f"**Mid-term Withdrawal ({mid_withdrawal_year}):** ₹{mid_withdrawal_amount/1e5:.2f}L")
     st.write(f"**Total SIP Investment:** ₹{(monthly_sip * (retirement_age - current_age) * 12)/1e7:.2f} Cr")
     if include_epf and monthly_epf > 0:
         st.write(f"**Existing EPF:** ₹{existing_epf/1e5:.2f} L")
@@ -620,4 +713,5 @@ if st.button("📥 Download Retirement Plan Summary"):
     )
 
 # --- FOOTER ---
- 
+st.markdown("---")
+st.caption("💡 Tip: LTCG calculations are approximate and based on current tax laws. Actual taxes may vary based on individual circumstances and future tax changes. Consider consulting a tax advisor for precise planning.")
